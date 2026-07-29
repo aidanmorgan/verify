@@ -47,6 +47,13 @@ export type ExternalCheckSpec = {
   /** Rewrite the tool's captured output before it is printed, e.g. to strip a tool's own hardcoded colouring. */
   transformOutput?: (output: string) => string
   maxWarnings?: MaxWarningsSupport
+  /**
+   * Called when `--ignore` globs are present. Returns extra argv to append to the tool invocation
+   * and an optional cleanup callback (e.g. to delete a temp config file) called after the check
+   * completes. Temp config files should be written to `cwd` so relative paths inside them resolve
+   * correctly against the project root.
+   */
+  withIgnore?: (patterns: readonly string[], cwd: string) => { args: string[]; cleanup?: () => void }
 }
 
 /** Pick the command for the run mode: the fix command only in fix mode and only when the check is fixable. */
@@ -121,7 +128,7 @@ export function defineExternalCheck(spec: ExternalCheckSpec): Check {
         fix: spec.fixCommand ? formatShellCommand(spec.fixCommand) : undefined,
       }
     },
-    async runDefault({ extraArgs = [], maxWarnings }: RunDefaultOptions = {}): Promise<CheckResult> {
+    async runDefault({ extraArgs = [], maxWarnings, ignore = [] }: RunDefaultOptions = {}): Promise<CheckResult> {
       if (!hasLocalBin(spec.bin)) {
         console.log(color.dim(`${spec.name}: ${spec.bin} not installed — skipping (add it with \`npx verifyx init\`)`))
         return { name: spec.name, ok: true, skipped: true }
@@ -130,18 +137,27 @@ export function defineExternalCheck(spec: ExternalCheckSpec): Check {
         console.log(color.dim(`${spec.name}: not applicable here — skipping`))
         return { name: spec.name, ok: true, skipped: true }
       }
+      const cwd = process.cwd()
+      const ignoreResult = ignore.length > 0 && spec.withIgnore ? spec.withIgnore(ignore, cwd) : undefined
+      const ignoreArgs = ignoreResult?.args ?? []
+      const cleanup = ignoreResult?.cleanup
       // quiet: buffer the tool's output and flush only on failure (streamed live under --verbose).
       const runReport = async (argv: string[]): Promise<CheckResult> => {
-        const code = await runArgvCommand(argv, { env: envWithLocalBin(), quiet: true, transform: spec.transformOutput })
-        if (code !== 0) console.error(color.dim(externalFailureHint(spec, argv)))
-        return { name: spec.name, ok: code === 0 }
+        try {
+          const code = await runArgvCommand(argv, { env: envWithLocalBin(), quiet: true, transform: spec.transformOutput })
+          if (code !== 0) console.error(color.dim(externalFailureHint(spec, argv)))
+          return { name: spec.name, ok: code === 0 }
+        } finally {
+          cleanup?.()
+        }
       }
       if (maxWarnings !== undefined && spec.maxWarnings) {
         const budget = spec.maxWarnings
-        if (budget.strategy === 'count') return runCountedBudget(spec, budget, maxWarnings, extraArgs, envWithLocalBin())
-        return runReport(appendArgv(selectCommand(spec, resolveMode()), [...extraArgs, ...budget.toArgs(maxWarnings)]))
+        if (budget.strategy === 'count')
+          return runCountedBudget(spec, budget, maxWarnings, [...extraArgs, ...ignoreArgs], envWithLocalBin())
+        return runReport(appendArgv(selectCommand(spec, resolveMode()), [...extraArgs, ...ignoreArgs, ...budget.toArgs(maxWarnings)]))
       }
-      return runReport(appendArgv(selectCommand(spec, resolveMode()), extraArgs))
+      return runReport(appendArgv(selectCommand(spec, resolveMode()), [...extraArgs, ...ignoreArgs]))
     },
   }
 }

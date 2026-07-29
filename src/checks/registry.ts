@@ -4,6 +4,7 @@ import { withoutRed } from '../shared/color.ts'
 import { runCodeMetrics } from './code-metrics.ts'
 import { runComments } from './comments.ts'
 import { runComplexity } from './complexity.ts'
+import { jscpdIgnore, knipIgnore, oxfmtIgnore, oxlintIgnore, skottIgnore, tscIgnore } from './external-ignore.ts'
 import { defineExternalCheck } from './external.ts'
 import { runForbiddenStrings } from './forbidden-strings.ts'
 import { runHardcodedColors } from './hardcoded-colors.ts'
@@ -52,6 +53,7 @@ export const CHECKS: Check[] = [
     devDeps: ['oxlint'],
     recommended: true,
     docs: 'https://oxc.rs/docs/guide/usage/linter.html',
+    withIgnore: oxlintIgnore(),
   }),
   defineExternalCheck({
     name: 'format',
@@ -62,6 +64,7 @@ export const CHECKS: Check[] = [
     devDeps: ['oxfmt'],
     recommended: true,
     docs: 'https://oxc.rs',
+    withIgnore: oxfmtIgnore(),
   }),
   defineExternalCheck({
     name: 'check-types',
@@ -72,6 +75,7 @@ export const CHECKS: Check[] = [
     canRun: () => fs.existsSync('tsconfig.json'),
     recommended: true,
     docs: 'https://www.typescriptlang.org/tsconfig',
+    withIgnore: tscIgnore(),
   }),
   defineExternalCheck({
     name: 'unused-code',
@@ -83,6 +87,7 @@ export const CHECKS: Check[] = [
     failureAdvice:
       'An "unused" finding can be a false positive when the file is loaded dynamically (directory scan + require(), glob-registered ORM entities) or a script calls a system binary. Verify before deleting: suppress genuinely runtime-loaded files via knip `entry` globs and system tools via `ignoreBinaries` — never delete a file to satisfy this check without checking how it is loaded.',
     maxWarnings: { strategy: 'flag', toArgs: (n) => ['--max-issues', String(n)] },
+    withIgnore: knipIgnore(),
   }),
   defineExternalCheck({
     name: 'circular-deps',
@@ -91,6 +96,7 @@ export const CHECKS: Check[] = [
     checkCommand: ['skott', '--displayMode=raw', '--showCircularDependencies', '--exitCodeOnCircularDependencies=1'],
     devDeps: ['skott'],
     docs: 'https://github.com/antoine-coulon/skott',
+    withIgnore: skottIgnore(),
   }),
   nativeCheck(
     'pkg-metrics',
@@ -117,6 +123,7 @@ export const CHECKS: Check[] = [
     transformOutput: withoutRed,
     docs: 'https://github.com/kucherenko/jscpd/tree/master/apps/jscpd#config',
     maxWarnings: { strategy: 'count', unit: 'duplicated region', count: jscpdCount },
+    withIgnore: jscpdIgnore(),
   }),
 ]
 
