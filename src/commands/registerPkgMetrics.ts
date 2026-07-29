@@ -1,7 +1,7 @@
 import type { Command } from 'commander'
 
+import { DEFAULT_GATES } from '../checks/pkg-metrics-core.ts'
 import { runPkgMetrics } from '../checks/pkg-metrics.ts'
-import { DEFAULT_GATES } from '../pkg-metrics.ts'
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value]
@@ -10,6 +10,7 @@ function collect(value: string, previous: string[]): string[] {
 type PkgMetricsOpts = {
   root?: string
   safe: string[]
+  allComplexity?: boolean
   minCohesion?: number
   cohesion?: boolean
   maxDistance?: number
@@ -27,6 +28,17 @@ type PkgMetricsOpts = {
 }
 
 function buildGates(opts: PkgMetricsOpts) {
+  if (opts.allComplexity) {
+    return {
+      cohesion: { threshold: opts.minCohesion, enabled: opts.cohesion ?? true },
+      distance: { threshold: opts.maxDistance, enabled: opts.distance ?? true },
+      instability: { threshold: opts.maxInstability, enabled: opts.instability ?? true },
+      abstractness: { threshold: opts.minAbstractness, enabled: opts.abstractness ?? true },
+      afferentCouplings: { threshold: opts.maxAfferent, enabled: opts.afferent ?? true },
+      efferentCouplings: { threshold: opts.maxEfferent, enabled: opts.efferent ?? true },
+      numClasses: { threshold: opts.maxClasses, enabled: opts.numClasses ?? true },
+    }
+  }
   return {
     cohesion: { threshold: opts.minCohesion, enabled: opts.cohesion },
     distance: { threshold: opts.maxDistance, enabled: opts.distance },
@@ -42,10 +54,11 @@ export function registerPkgMetricsCommand(program: Command, finish: (ok: boolean
   program
     .command('pkg-metrics')
     .description(
-      'Package architecture metrics: cohesion (H), distance (D), instability (I), abstractness (A), couplings (Ca/Ce), size (N) — all gates off by default, enable per-gate via flags',
+      'Package architecture metrics: cohesion (H), distance (D), instability (I), abstractness (A), couplings (Ca/Ce), size (N) — all gates off by default, enable per-gate via flags or use --all-gates',
     )
     .option('--root <dir>', 'directory whose immediate subdirectories are treated as packages (default: src/)')
     .option('--safe <pkg>', 'mark a package as dependency-safe (repeatable)', collect, [])
+    .option('--all-complexity', 'enable all gates at their default thresholds')
     .option('--min-cohesion <n>', `minimum relational cohesion H (default: ${DEFAULT_GATES.cohesion.threshold})`, Number)
     .option('--no-cohesion', 'disable the cohesion gate')
     .option('--cohesion', 'enable the cohesion gate')

@@ -1,6 +1,6 @@
-import type { PkgMetricsGates } from '../pkg-metrics.ts'
-import { analyzePkgMetrics, type MetricGate, printPkgMetricsReport, resolveGates } from '../pkg-metrics.ts'
 import { loadVerifyConfig } from '../shared/config.ts'
+import { analyzePkgMetrics, printPkgMetricsReport, resolveGates } from './pkg-metrics-core.ts'
+import type { MetricGate, PkgMetricsGates } from './pkg-metrics-types.ts'
 import type { CheckResult } from './types.ts'
 
 export type PkgMetricsCheckOptions = {
