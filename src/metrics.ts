@@ -1,19 +1,21 @@
 // Metric calculations ported from https://github.com/staff0rd/assist/tree/75a75899d7578769a433fb8058c96dd29410c254/src/commands/complexity
 import ts from 'typescript'
 
-const complexityKinds = new Set<ts.SyntaxKind>([
+// Structural control-flow constructs shared between cyclomatic and cognitive complexity
+export const structuralKinds = new Set<ts.SyntaxKind>([
   ts.SyntaxKind.IfStatement,
   ts.SyntaxKind.ForStatement,
   ts.SyntaxKind.ForInStatement,
   ts.SyntaxKind.ForOfStatement,
   ts.SyntaxKind.WhileStatement,
   ts.SyntaxKind.DoStatement,
-  ts.SyntaxKind.CaseClause,
   ts.SyntaxKind.CatchClause,
-  ts.SyntaxKind.ConditionalExpression,
 ])
 
-const logicalOperators = new Set<ts.SyntaxKind>([
+// Cyclomatic complexity also counts case clauses and conditional expressions
+const complexityKinds = new Set<ts.SyntaxKind>([...structuralKinds, ts.SyntaxKind.CaseClause, ts.SyntaxKind.ConditionalExpression])
+
+export const logicalOperators = new Set<ts.SyntaxKind>([
   ts.SyntaxKind.AmpersandAmpersandToken,
   ts.SyntaxKind.BarBarToken,
   ts.SyntaxKind.QuestionQuestionToken,
@@ -25,6 +27,8 @@ export function calculateCyclomaticComplexity(node: ts.Node): number {
     if (complexityKinds.has(n.kind)) {
       complexity++
     } else if (ts.isBinaryExpression(n) && logicalOperators.has(n.operatorToken.kind)) {
+      complexity++
+    } else if (ts.isPropertyAccessChain(n) || ts.isCallChain(n) || ts.isElementAccessChain(n)) {
       complexity++
     }
     ts.forEachChild(n, visit)
@@ -82,6 +86,7 @@ export function calculateHalstead(node: ts.Node): HalsteadMetrics {
   const operators = new Map<string, number>()
   const operands = new Map<string, number>()
   const visit = (n: ts.Node): void => {
+    if (ts.isTypeNode(n) || ts.isTypeParameterDeclaration(n)) return
     classifyNode(n, operators, operands)
     ts.forEachChild(n, visit)
   }
