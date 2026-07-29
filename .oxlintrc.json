@@ -26,7 +26,15 @@
   "overrides": [
     {
       // The CLI and its reporting surface legitimately write to stdout/stderr.
-      "files": ["src/cli.ts", "src/report.ts", "src/commands/**", "src/orchestrator/**", "src/checks/**", "src/shared/output.ts"],
+      "files": [
+        "src/cli.ts",
+        "src/report.ts",
+        "src/pkg-metrics-report.ts",
+        "src/commands/**",
+        "src/orchestrator/**",
+        "src/checks/**",
+        "src/shared/output.ts"
+      ],
       "rules": {
         "no-console": "off"
       }

@@ -13,6 +13,7 @@ export { type CommentsOptions, runComments } from './checks/comments.ts'
 export { runComplexity } from './checks/complexity.ts'
 export { runForbiddenStrings } from './checks/forbidden-strings.ts'
 export { runHardcodedColors } from './checks/hardcoded-colors.ts'
+export { type PkgMetricsCheckOptions, runPkgMetrics } from './checks/pkg-metrics.ts'
 export { CHECKS, getCheck, recommendedChecks } from './checks/registry.ts'
 export type { Check, CheckKind, CheckMode, CheckResult, RunDefaultOptions } from './checks/types.ts'
 export { type CommentBlockViolation, findLongCommentBlocks } from './comments.ts'
@@ -28,4 +29,16 @@ export { orchestrate } from './orchestrator/run.ts'
 export { runAll } from './orchestrator/runAll.ts'
 export { applyEject, type EjectResult, ejectScripts } from './scaffold/eject.ts'
 export { applyInit, type InitOptions, type InitResult } from './scaffold/init.ts'
-export { type ForbiddenStringsRule, loadVerifyConfig, type VerifyConfig } from './shared/config.ts'
+export { type ForbiddenStringsRule, loadVerifyConfig, type PkgMetricsGateConfig, type VerifyConfig } from './shared/config.ts'
+export {
+  analyzePkgMetrics,
+  DEFAULT_GATES,
+  type MetricGate,
+  type MetricViolation,
+  type PackageMetrics,
+  type PkgMetricsGates,
+  type PkgMetricsOptions,
+  type PkgMetricsResult,
+  printPkgMetricsReport,
+  resolveGates,
+} from './pkg-metrics.ts'

@@ -5,6 +5,7 @@ import { runComplexity } from '../checks/complexity.ts'
 import { runForbiddenStrings } from '../checks/forbidden-strings.ts'
 import { runHardcodedColors } from '../checks/hardcoded-colors.ts'
 import { CHECKS } from '../checks/registry.ts'
+import { registerPkgMetricsCommand } from './registerPkgMetrics.ts'
 
 function finish(ok: boolean): void {
   process.exitCode = ok ? 0 : 1
@@ -76,6 +77,8 @@ export function registerChecks(program: Command): void {
     .action(() => {
       finish(runForbiddenStrings().ok)
     })
+
+  registerPkgMetricsCommand(program, finish)
 
   // Mode flows via the VERIFY_MODE env / CI, not per-subcommand flags (which collide with the root's --check).
   for (const check of CHECKS.filter((c) => c.kind === 'external')) {

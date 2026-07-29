@@ -8,10 +8,32 @@ export type ForbiddenStringsRule = {
   disallowed: string
 }
 
+/** Per-metric gate stored in verify.config.json under `pkgMetrics.gates`. */
+export type PkgMetricsGateConfig = {
+  threshold?: number
+  enabled?: boolean
+}
+
 export type VerifyConfig = {
   comments?: { ignore?: string[] }
   hardcodedColors?: { ignore?: string[]; root?: string }
   forbiddenStrings?: ForbiddenStringsRule[]
+  pkgMetrics?: {
+    /** Root directory whose immediate subdirectories are treated as packages. */
+    root?: string
+    /** Packages that are dependency-safe (overrides instability in normal-distance calculation). */
+    safePackages?: string[]
+    /** Per-metric threshold and enabled flag. */
+    gates?: {
+      cohesion?: PkgMetricsGateConfig
+      distance?: PkgMetricsGateConfig
+      instability?: PkgMetricsGateConfig
+      abstractness?: PkgMetricsGateConfig
+      afferentCouplings?: PkgMetricsGateConfig
+      efferentCouplings?: PkgMetricsGateConfig
+      numClasses?: PkgMetricsGateConfig
+    }
+  }
 }
 
 const CONFIG_FILE = 'verify.config.json'

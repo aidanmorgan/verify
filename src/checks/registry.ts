@@ -7,6 +7,7 @@ import { defineExternalCheck } from './external.ts'
 import { runForbiddenStrings } from './forbidden-strings.ts'
 import { runHardcodedColors } from './hardcoded-colors.ts'
 import { jscpdCount } from './maxWarnings.ts'
+import { runPkgMetrics } from './pkg-metrics.ts'
 import type { Check, CheckResult } from './types.ts'
 
 function nativeCheck(name: string, description: string, recommended: boolean, run: () => CheckResult, script = `verifyx ${name}`): Check {
@@ -82,6 +83,13 @@ export const CHECKS: Check[] = [
     devDeps: ['skott'],
     docs: 'https://github.com/antoine-coulon/skott',
   }),
+  nativeCheck(
+    'pkg-metrics',
+    'Package architecture metrics: cohesion (H), distance (D), instability (I), abstractness (A), couplings (Ca/Ce), size (N)',
+    false,
+    () => runPkgMetrics(),
+    'verifyx pkg-metrics',
+  ),
   defineExternalCheck({
     name: 'duplicate-code',
     description: 'Copy-paste / duplicate-code detection',
