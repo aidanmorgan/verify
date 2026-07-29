@@ -18,6 +18,8 @@ export type RunDefaultOptions = {
   maxWarnings?: number
   /** Glob patterns to exclude from this check run. Merged with per-check config-file ignore lists. */
   ignore?: readonly string[]
+  /** Complexity profile to apply to code-metrics (light | moderate | aggressive). */
+  complexityProfile?: string
 }
 
 /** A single verification. Native checks run in-process; external checks spawn a tool. */

@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 
 import { withoutRed } from '../shared/color.ts'
+import type { ComplexityProfile } from './code-metrics-types.ts'
 import { runCodeMetrics } from './code-metrics.ts'
 import { runComments } from './comments.ts'
 import { runComplexity } from './complexity.ts'
@@ -16,7 +17,7 @@ function nativeCheck(
   name: string,
   description: string,
   recommended: boolean,
-  run: (ignore?: readonly string[]) => CheckResult,
+  run: (opts?: { ignore?: readonly string[]; complexityProfile?: string }) => CheckResult,
   script = `verifyx ${name}`,
 ): Check {
   return {
@@ -26,22 +27,26 @@ function nativeCheck(
     recommended,
     // Native checks scaffold as a call back into this CLI's own subcommand.
     scaffold: { script },
-    runDefault: async (opts) => run(opts?.ignore),
+    runDefault: async (opts) => run({ ignore: opts?.ignore, complexityProfile: opts?.complexityProfile }),
   }
 }
 
 // context: checks are named for their function, never the tool behind them (see each check's bin/devDeps).
 export const CHECKS: Check[] = [
-  nativeCheck('complexity', 'Maintainability-index gate (cyclomatic + Halstead + SLOC)', true, (ignore) => runComplexity({ ignore })),
+  nativeCheck('complexity', 'Maintainability-index gate (cyclomatic + Halstead + SLOC)', true, ({ ignore } = {}) =>
+    runComplexity({ ignore }),
+  ),
   nativeCheck(
     'comments',
     'Flag long comment blocks (JSDoc / context: exempt); --block-new-comments also fails comments on changed lines',
     true,
-    (ignore) => runComments({ pushback: true, ignore }),
+    ({ ignore } = {}) => runComments({ pushback: true, ignore }),
     'verifyx comments --pushback',
   ),
-  nativeCheck('hardcoded-colors', 'Fail on literal hex / 0x colour values in source', false, (ignore) => runHardcodedColors({ ignore })),
-  nativeCheck('forbidden-strings', 'Fail on disallowed JSON config values (rules from verify config)', false, (ignore) =>
+  nativeCheck('hardcoded-colors', 'Fail on literal hex / 0x colour values in source', false, ({ ignore } = {}) =>
+    runHardcodedColors({ ignore }),
+  ),
+  nativeCheck('forbidden-strings', 'Fail on disallowed JSON config values (rules from verify config)', false, ({ ignore } = {}) =>
     runForbiddenStrings({ ignore }),
   ),
   defineExternalCheck({
@@ -102,14 +107,14 @@ export const CHECKS: Check[] = [
     'pkg-metrics',
     'Package architecture metrics: cohesion (H), distance (D), instability (I), abstractness (A), couplings (Ca/Ce), size (N)',
     false,
-    (ignore) => runPkgMetrics({ ignore }),
+    ({ ignore } = {}) => runPkgMetrics({ ignore }),
     'verifyx pkg-metrics',
   ),
   nativeCheck(
     'code-metrics',
     'Per-function code complexity gates: cyclomatic complexity, cognitive complexity, and maintainability index (MI)',
     false,
-    (ignore) => runCodeMetrics({ ignore }),
+    ({ ignore, complexityProfile } = {}) => runCodeMetrics({ ignore, profile: complexityProfile as ComplexityProfile | undefined }),
     'verifyx code-metrics',
   ),
   defineExternalCheck({

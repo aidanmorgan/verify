@@ -15,7 +15,15 @@ import { configureMode } from './shared/mode.ts'
 const require = createRequire(import.meta.url)
 const pkg = require('../package.json') as { version: string }
 
-type RunOptions = { measure?: boolean; verbose?: boolean; check?: boolean; fix?: boolean; tests?: boolean; ignore?: string[] }
+type RunOptions = {
+  measure?: boolean
+  verbose?: boolean
+  check?: boolean
+  fix?: boolean
+  tests?: boolean
+  ignore?: string[]
+  complexity?: string | boolean
+}
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value]
@@ -30,6 +38,10 @@ function withRunOptions(command: Command): Command {
     .option('--fix', 'auto-fix where possible (the default locally)')
     .option('--no-tests', 'skip the automatic tests step (verify:test / test locally, test:ci on CI)')
     .option('--ignore <glob>', 'exclude files/dirs matching glob from all native checks (repeatable)', collect, [])
+    .option(
+      '--complexity [profile]',
+      'enable code-metrics gates using a named profile (light | moderate | aggressive); omitting the value uses moderate',
+    )
 }
 
 const program = new Command()
@@ -51,7 +63,14 @@ withRunOptions(
   // Run options live on the root command (commander treats them as global), so merge globals to catch flags after `all`.
   const opts = command.optsWithGlobals() as RunOptions
   configureMode(opts)
-  process.exitCode = await runAll({ measure: opts.measure, tests: opts.tests, verbose: opts.verbose, ignore: opts.ignore })
+  const complexityProfile = (opts.complexity === true ? 'moderate' : opts.complexity) || undefined
+  process.exitCode = await runAll({
+    measure: opts.measure,
+    tests: opts.tests,
+    verbose: opts.verbose,
+    ignore: opts.ignore,
+    complexityProfile,
+  })
 })
 
 registerChecks(program)
