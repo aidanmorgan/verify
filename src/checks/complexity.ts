@@ -1,6 +1,7 @@
 import { analyzeComplexity } from '../analyze.ts'
 import { printFailure, printFileDetail, printMaintainabilityReport } from '../report.ts'
 import { color } from '../shared/color.ts'
+import { loadVerifyConfig } from '../shared/config.ts'
 import type { CheckResult } from './types.ts'
 
 const DEFAULT_THRESHOLD = 50
@@ -14,7 +15,8 @@ export type ComplexityOptions = {
 /** Native maintainability-index check. A single matched file prints a per-metric breakdown instead of the gate. */
 export function runComplexity(opts: ComplexityOptions = {}): CheckResult {
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD
-  const analysis = analyzeComplexity({ pattern: opts.pattern, ignore: opts.ignore, threshold })
+  const ignore = [...(loadVerifyConfig().ignore ?? []), ...(opts.ignore ?? [])]
+  const analysis = analyzeComplexity({ pattern: opts.pattern, ignore, threshold })
 
   if (analysis.files.length === 0) {
     console.log(color.yellow('complexity: no files matched — skipping'))

@@ -15,7 +15,11 @@ import { configureMode } from './shared/mode.ts'
 const require = createRequire(import.meta.url)
 const pkg = require('../package.json') as { version: string }
 
-type RunOptions = { measure?: boolean; verbose?: boolean; check?: boolean; fix?: boolean; tests?: boolean }
+type RunOptions = { measure?: boolean; verbose?: boolean; check?: boolean; fix?: boolean; tests?: boolean; ignore?: string[] }
+
+function collect(value: string, previous: string[]): string[] {
+  return [...previous, value]
+}
 
 /** The options shared by the default run and `verifyx all`. */
 function withRunOptions(command: Command): Command {
@@ -25,6 +29,7 @@ function withRunOptions(command: Command): Command {
     .option('--check', 'check only — never auto-fix (the default under CI)')
     .option('--fix', 'auto-fix where possible (the default locally)')
     .option('--no-tests', 'skip the automatic tests step (verify:test / test locally, test:ci on CI)')
+    .option('--ignore <glob>', 'exclude files/dirs matching glob from all native checks (repeatable)', collect, [])
 }
 
 const program = new Command()
@@ -46,7 +51,7 @@ withRunOptions(
   // Run options live on the root command (commander treats them as global), so merge globals to catch flags after `all`.
   const opts = command.optsWithGlobals() as RunOptions
   configureMode(opts)
-  process.exitCode = await runAll({ measure: opts.measure, tests: opts.tests, verbose: opts.verbose })
+  process.exitCode = await runAll({ measure: opts.measure, tests: opts.tests, verbose: opts.verbose, ignore: opts.ignore })
 })
 
 registerChecks(program)

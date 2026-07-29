@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { minimatch } from 'minimatch'
 import ts from 'typescript'
 
 // ─── file collection ──────────────────────────────────────────────────────────
@@ -101,8 +102,13 @@ export type RawPackageData = {
   efferentTargets: string[]
 }
 
-export function analyzePackage(name: string, dir: string, allPackageDirs: readonly string[]): RawPackageData {
-  const files = collectTsFiles(dir)
+export function analyzePackage(
+  name: string,
+  dir: string,
+  allPackageDirs: readonly string[],
+  ignore: readonly string[] = [],
+): RawPackageData {
+  const files = collectTsFiles(dir).filter((f) => !ignore.some((g) => minimatch(f, g)))
   let numClasses = 0
   let numAbstract = 0
   let internalRelationships = 0

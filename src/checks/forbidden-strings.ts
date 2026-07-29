@@ -42,11 +42,14 @@ function readJsonFile(file: string): unknown {
   }
 }
 
-export type ForbiddenStringsOptions = { rules?: readonly ForbiddenStringsRule[] }
+export type ForbiddenStringsOptions = { rules?: readonly ForbiddenStringsRule[]; ignore?: readonly string[] }
 
 /** Fail when configured JSON values match a `disallowed` glob. Rules come from verify config. */
 export function runForbiddenStrings(opts: ForbiddenStringsOptions = {}): CheckResult {
-  const rules = opts.rules ?? loadVerifyConfig().forbiddenStrings ?? []
+  const config = loadVerifyConfig()
+  const ignoreGlobs = [...(config.ignore ?? []), ...(opts.ignore ?? [])]
+  const allRules = opts.rules ?? config.forbiddenStrings ?? []
+  const rules = ignoreGlobs.length ? allRules.filter((r) => !ignoreGlobs.some((g) => minimatch(r.file, g))) : allRules
   if (rules.length === 0) {
     console.log(color.dim('forbidden-strings: no rules configured — skipping'))
     return { name: 'forbidden-strings', ok: true }

@@ -8,7 +8,7 @@ import { reportOutcomes } from './report.ts'
 import { entryCheckName, resolveEntries, resolveOverride, selectEntries } from './resolveEntries.ts'
 import { resolveTestEntry, TEST_CHECK_NAME } from './tests.ts'
 
-export type RunAllOptions = { measure?: boolean; verbose?: boolean; tests?: boolean }
+export type RunAllOptions = { measure?: boolean; verbose?: boolean; tests?: boolean; ignore?: readonly string[] }
 
 type Task = { name: string; note?: string; run: () => Promise<boolean> }
 
@@ -24,7 +24,7 @@ function buildTasks(opts: RunAllOptions): Task[] {
 
   const tasks: Task[] = CHECKS.map((check) => {
     const override = resolveOverride(entries, check.name, mode)
-    if (!override) return { name: check.name, run: async () => (await check.runDefault()).ok }
+    if (!override) return { name: check.name, run: async () => (await check.runDefault({ ignore: opts.ignore })).ok }
     return {
       name: check.name,
       note: 'overridden',

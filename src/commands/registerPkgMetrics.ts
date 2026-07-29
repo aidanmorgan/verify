@@ -10,6 +10,7 @@ function collect(value: string, previous: string[]): string[] {
 type PkgMetricsOpts = {
   root?: string
   safe: string[]
+  ignore: string[]
   allComplexity?: boolean
   minCohesion?: number
   cohesion?: boolean
@@ -58,6 +59,7 @@ export function registerPkgMetricsCommand(program: Command, finish: (ok: boolean
     )
     .option('--root <dir>', 'directory whose immediate subdirectories are treated as packages (default: src/)')
     .option('--safe <pkg>', 'mark a package as dependency-safe (repeatable)', collect, [])
+    .option('--ignore <glob>', 'ignore glob — matching packages or files are excluded (repeatable)', collect, [])
     .option('--all-complexity', 'enable all gates at their default thresholds')
     .option('--min-cohesion <n>', `minimum relational cohesion H (default: ${DEFAULT_GATES.cohesion.threshold})`, Number)
     .option('--no-cohesion', 'disable the cohesion gate')
@@ -86,6 +88,7 @@ export function registerPkgMetricsCommand(program: Command, finish: (ok: boolean
           root: opts.root,
           safePackages: opts.safe.length ? opts.safe : undefined,
           gates: buildGates(opts),
+          ignore: opts.ignore.length ? opts.ignore : undefined,
         }).ok,
       )
     })

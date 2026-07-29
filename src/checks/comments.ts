@@ -92,9 +92,11 @@ export type CommentsOptions = {
  * With `blockNewComments`, additionally fail on any comment on a line changed against HEAD.
  */
 export function runComments(opts: CommentsOptions = {}): CheckResult {
+  const config = loadVerifyConfig()
   const maxLines = opts.maxLines ?? DEFAULT_MAX_COMMENT_BLOCK_LINES
   const pattern = opts.pattern ?? DEFAULT_PATTERN
-  const files = findSourceFiles(resolvePattern(pattern), [...DEFAULT_IGNORE, ...(opts.ignore ?? [])])
+  const mergedIgnore = [...(config.ignore ?? []), ...(config.comments?.ignore ?? []), ...(opts.ignore ?? [])]
+  const files = findSourceFiles(resolvePattern(pattern), [...DEFAULT_IGNORE, ...mergedIgnore])
 
   const blocks = findLongCommentBlocks(files, maxLines)
   let blocksOk = true
@@ -107,8 +109,7 @@ export function runComments(opts: CommentsOptions = {}): CheckResult {
 
   let changedLinesOk = true
   if (opts.blockNewComments) {
-    const ignoreGlobs = opts.ignore?.length ? opts.ignore : (loadVerifyConfig().comments?.ignore ?? [])
-    const findings = findCommentsOnChangedLines(ignoreGlobs)
+    const findings = findCommentsOnChangedLines(mergedIgnore)
     if (findings.length === 0) {
       console.log(color.green('No comments on changed lines.'))
     } else {

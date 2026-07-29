@@ -13,6 +13,22 @@ export { type CommentsOptions, runComments } from './checks/comments.ts'
 export { runComplexity } from './checks/complexity.ts'
 export { runForbiddenStrings } from './checks/forbidden-strings.ts'
 export { runHardcodedColors } from './checks/hardcoded-colors.ts'
+export { type CodeMetricsCheckOptions, runCodeMetrics } from './checks/code-metrics.ts'
+export {
+  analyzeCodeMetrics,
+  COMPLEXITY_PROFILES,
+  DEFAULT_CODE_GATES,
+  type CodeMetricGate,
+  type CodeMetricsGates,
+  type CodeMetricsOptions,
+  type CodeMetricsResult,
+  type CodeMetricsViolation,
+  type ComplexityProfile,
+  type FileComplexityScore,
+  type FunctionScore,
+  printCodeMetricsReport,
+  resolveCodeGates,
+} from './checks/code-metrics-core.ts'
 export { type PkgMetricsCheckOptions, runPkgMetrics } from './checks/pkg-metrics.ts'
 export {
   analyzePkgMetrics,
@@ -30,6 +46,7 @@ export { CHECKS, getCheck, recommendedChecks } from './checks/registry.ts'
 export type { Check, CheckKind, CheckMode, CheckResult, RunDefaultOptions } from './checks/types.ts'
 export { type CommentBlockViolation, findLongCommentBlocks } from './comments.ts'
 export { type FunctionCallback, forEachFunction } from './functions.ts'
+export { calculateCognitiveComplexity } from './cognitive-metrics.ts'
 export {
   calculateCyclomaticComplexity,
   calculateHalstead,

@@ -5,6 +5,7 @@ import { runComplexity } from '../checks/complexity.ts'
 import { runForbiddenStrings } from '../checks/forbidden-strings.ts'
 import { runHardcodedColors } from '../checks/hardcoded-colors.ts'
 import { CHECKS } from '../checks/registry.ts'
+import { registerCodeMetricsCommand } from './registerCodeMetrics.ts'
 import { registerPkgMetricsCommand } from './registerPkgMetrics.ts'
 
 function finish(ok: boolean): void {
@@ -74,11 +75,13 @@ export function registerChecks(program: Command): void {
   program
     .command('forbidden-strings')
     .description('Fail on disallowed JSON config values (rules from verify config)')
-    .action(() => {
-      finish(runForbiddenStrings().ok)
+    .option('--ignore <glob>', 'ignore glob — rules whose file matches are skipped (repeatable)', collect, [])
+    .action((opts: { ignore: string[] }) => {
+      finish(runForbiddenStrings({ ignore: opts.ignore }).ok)
     })
 
   registerPkgMetricsCommand(program, finish)
+  registerCodeMetricsCommand(program, finish)
 
   // Mode flows via the VERIFY_MODE env / CI, not per-subcommand flags (which collide with the root's --check).
   for (const check of CHECKS.filter((c) => c.kind === 'external')) {

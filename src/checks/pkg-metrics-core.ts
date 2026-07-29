@@ -1,6 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { minimatch } from 'minimatch'
+
 import { color } from '../shared/color.ts'
 import { analyzePackage, type RawPackageData } from './pkg-metrics-ast.ts'
 import type { MetricGate, MetricViolation, PackageMetrics, PkgMetricsGates, PkgMetricsResult } from './pkg-metrics-types.ts'
@@ -26,6 +28,8 @@ export type PkgMetricsOptions = {
   gates?: Partial<{ [K in keyof PkgMetricsGates]: Partial<MetricGate> }>
   /** Packages that are dependency-safe (overrides instability in D calculation). */
   safePackages?: readonly string[]
+  /** Glob patterns matched against package directory paths — matching packages are excluded. */
+  ignore?: readonly string[]
 }
 
 export function resolveGates(overrides: PkgMetricsOptions['gates']): PkgMetricsGates {
@@ -104,6 +108,7 @@ function computePackageMetrics(pkg: RawPackageData, afferentCouplings: number, s
 
 export function analyzePkgMetrics(opts: PkgMetricsOptions = {}): PkgMetricsResult {
   const safePackages = opts.safePackages ?? []
+  const ignoreGlobs = opts.ignore ?? []
   const gates = resolveGates(opts.gates)
   const absRoot = path.resolve(opts.root ?? 'src')
 
@@ -112,11 +117,12 @@ export function analyzePkgMetrics(opts: PkgMetricsOptions = {}): PkgMetricsResul
   const packageDirs = (fs.readdirSync(absRoot, { withFileTypes: true }) as fs.Dirent[])
     .filter((e) => e.isDirectory())
     .map((e) => ({ name: e.name, dir: path.join(absRoot, e.name) }))
+    .filter((p) => !ignoreGlobs.some((g) => minimatch(p.dir, g) || minimatch(p.name, g)))
 
   if (packageDirs.length === 0) return { packages: [], violations: [], passed: true }
 
   const allDirs = packageDirs.map((p) => p.dir)
-  const rawData = packageDirs.map((p) => analyzePackage(p.name, p.dir, allDirs))
+  const rawData = packageDirs.map((p) => analyzePackage(p.name, p.dir, allDirs, ignoreGlobs))
   const afferentMap = buildAfferentMap(rawData)
   const packages = rawData.map((pkg) => computePackageMetrics(pkg, afferentMap.get(pkg.name) ?? 0, safePackages))
   const violations = collectViolations(packages, gates)

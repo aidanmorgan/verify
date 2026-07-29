@@ -16,6 +16,8 @@ export type RunDefaultOptions = {
   /** Extra arguments appended verbatim to an external check's underlying argv (e.g. `verifyx circular-deps -- src/index.ts`). */
   extraArgs?: string[]
   maxWarnings?: number
+  /** Glob patterns to exclude from this check run. Merged with per-check config-file ignore lists. */
+  ignore?: readonly string[]
 }
 
 /** A single verification. Native checks run in-process; external checks spawn a tool. */

@@ -8,13 +8,15 @@ export type ForbiddenStringsRule = {
   disallowed: string
 }
 
-/** Per-metric gate stored in verify.config.json under `pkgMetrics.gates`. */
+/** Per-metric gate stored in verify.config.json under `pkgMetrics.gates` or `codeMetrics.gates`. */
 export type PkgMetricsGateConfig = {
   threshold?: number
   enabled?: boolean
 }
 
 export type VerifyConfig = {
+  /** Glob patterns excluded from every native check. Merged with per-check ignore lists. */
+  ignore?: string[]
   comments?: { ignore?: string[] }
   hardcodedColors?: { ignore?: string[]; root?: string }
   forbiddenStrings?: ForbiddenStringsRule[]
@@ -32,6 +34,20 @@ export type VerifyConfig = {
       afferentCouplings?: PkgMetricsGateConfig
       efferentCouplings?: PkgMetricsGateConfig
       numClasses?: PkgMetricsGateConfig
+    }
+  }
+  codeMetrics?: {
+    /** Glob pattern, directory, or file to analyse. Defaults to `{src,server,shared}/**\/*.ts`. */
+    pattern?: string
+    /** Extra ignore globs appended to the default test-file exclusions. */
+    ignore?: string[]
+    /** Enable all gates at a named threshold profile. Per-gate overrides in `gates` still apply on top. */
+    profile?: 'light' | 'moderate' | 'aggressive'
+    /** Per-metric threshold and enabled flag. Merged on top of the active profile (or defaults if no profile). */
+    gates?: {
+      cyclomaticComplexity?: PkgMetricsGateConfig
+      cognitiveComplexity?: PkgMetricsGateConfig
+      maintainabilityIndex?: PkgMetricsGateConfig
     }
   }
 }

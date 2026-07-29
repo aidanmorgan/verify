@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 
 import { withoutRed } from '../shared/color.ts'
+import { runCodeMetrics } from './code-metrics.ts'
 import { runComments } from './comments.ts'
 import { runComplexity } from './complexity.ts'
 import { defineExternalCheck } from './external.ts'
@@ -10,7 +11,13 @@ import { jscpdCount } from './maxWarnings.ts'
 import { runPkgMetrics } from './pkg-metrics.ts'
 import type { Check, CheckResult } from './types.ts'
 
-function nativeCheck(name: string, description: string, recommended: boolean, run: () => CheckResult, script = `verifyx ${name}`): Check {
+function nativeCheck(
+  name: string,
+  description: string,
+  recommended: boolean,
+  run: (ignore?: readonly string[]) => CheckResult,
+  script = `verifyx ${name}`,
+): Check {
   return {
     name,
     description,
@@ -18,22 +25,24 @@ function nativeCheck(name: string, description: string, recommended: boolean, ru
     recommended,
     // Native checks scaffold as a call back into this CLI's own subcommand.
     scaffold: { script },
-    runDefault: async () => run(),
+    runDefault: async (opts) => run(opts?.ignore),
   }
 }
 
 // context: checks are named for their function, never the tool behind them (see each check's bin/devDeps).
 export const CHECKS: Check[] = [
-  nativeCheck('complexity', 'Maintainability-index gate (cyclomatic + Halstead + SLOC)', true, () => runComplexity()),
+  nativeCheck('complexity', 'Maintainability-index gate (cyclomatic + Halstead + SLOC)', true, (ignore) => runComplexity({ ignore })),
   nativeCheck(
     'comments',
     'Flag long comment blocks (JSDoc / context: exempt); --block-new-comments also fails comments on changed lines',
     true,
-    () => runComments({ pushback: true }),
+    (ignore) => runComments({ pushback: true, ignore }),
     'verifyx comments --pushback',
   ),
-  nativeCheck('hardcoded-colors', 'Fail on literal hex / 0x colour values in source', false, () => runHardcodedColors()),
-  nativeCheck('forbidden-strings', 'Fail on disallowed JSON config values (rules from verify config)', false, () => runForbiddenStrings()),
+  nativeCheck('hardcoded-colors', 'Fail on literal hex / 0x colour values in source', false, (ignore) => runHardcodedColors({ ignore })),
+  nativeCheck('forbidden-strings', 'Fail on disallowed JSON config values (rules from verify config)', false, (ignore) =>
+    runForbiddenStrings({ ignore }),
+  ),
   defineExternalCheck({
     name: 'lint',
     description: 'Lint — auto-fixes locally, checks in CI',
@@ -87,8 +96,15 @@ export const CHECKS: Check[] = [
     'pkg-metrics',
     'Package architecture metrics: cohesion (H), distance (D), instability (I), abstractness (A), couplings (Ca/Ce), size (N)',
     false,
-    () => runPkgMetrics(),
+    (ignore) => runPkgMetrics({ ignore }),
     'verifyx pkg-metrics',
+  ),
+  nativeCheck(
+    'code-metrics',
+    'Per-function code complexity gates: cyclomatic complexity, cognitive complexity, and maintainability index (MI)',
+    false,
+    (ignore) => runCodeMetrics({ ignore }),
+    'verifyx code-metrics',
   ),
   defineExternalCheck({
     name: 'duplicate-code',
