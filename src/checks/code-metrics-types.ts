@@ -10,19 +10,8 @@ export type CodeMetricGate = {
 }
 
 export type CodeMetricsGates = {
-  /** Cyclomatic complexity — fail when any function exceeds threshold. Lower is better. */
-  cyclomaticComplexity: CodeMetricGate
-  /** Cognitive complexity — fail when any function exceeds threshold. Lower is better. */
-  cognitiveComplexity: CodeMetricGate
   /** Maintainability index (0–100) — fail when any file's minimum MI falls below threshold. Higher is better. */
   maintainabilityIndex: CodeMetricGate
-}
-
-export type FunctionScore = {
-  file: string
-  name: string
-  cyclomatic: number
-  cognitive: number
 }
 
 export type FileComplexityScore = {
@@ -32,13 +21,9 @@ export type FileComplexityScore = {
 }
 
 export type CodeMetricsResult = {
-  functions: FunctionScore[]
   files: FileComplexityScore[]
   violations: CodeMetricsViolation[]
   passed: boolean
 }
 
-export type CodeMetricsViolation =
-  | { kind: 'cyclomaticComplexity'; functions: FunctionScore[] }
-  | { kind: 'cognitiveComplexity'; functions: FunctionScore[] }
-  | { kind: 'maintainabilityIndex'; files: FileComplexityScore[] }
+export type CodeMetricsViolation = { kind: 'maintainabilityIndex'; files: FileComplexityScore[] }

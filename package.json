@@ -82,11 +82,15 @@
     "vitest": "^4.1.10"
   },
   "peerDependencies": {
+    "@biomejs/biome": "^2.0.0",
     "jscpd": "^5.0.11",
     "knip": "^6.25.0",
     "skott": "^0.35.11"
   },
   "peerDependenciesMeta": {
+    "@biomejs/biome": {
+      "optional": true
+    },
     "jscpd": {
       "optional": true
     },

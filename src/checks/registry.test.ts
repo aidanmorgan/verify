@@ -17,6 +17,8 @@ describe('check registry', () => {
         'unused-code',
         'circular-deps',
         'duplicate-code',
+        'cyclomatic-complexity',
+        'cognitive-complexity',
       ]),
     )
   })

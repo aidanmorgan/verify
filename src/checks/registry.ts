@@ -3,8 +3,10 @@ import fs from 'node:fs'
 import { withoutRed } from '../shared/color.ts'
 import type { ComplexityProfile } from './code-metrics-types.ts'
 import { runCodeMetrics } from './code-metrics.ts'
+import { runCognitiveComplexity } from './cognitive-complexity.ts'
 import { runComments } from './comments.ts'
 import { runComplexity } from './complexity.ts'
+import { runCyclomaticComplexity } from './cyclomatic-complexity.ts'
 import { jscpdIgnore, knipIgnore, oxfmtIgnore, oxlintIgnore, skottIgnore, tscIgnore } from './external-ignore.ts'
 import { defineExternalCheck } from './external.ts'
 import { runForbiddenStrings } from './forbidden-strings.ts'
@@ -17,7 +19,7 @@ function nativeCheck(
   name: string,
   description: string,
   recommended: boolean,
-  run: (opts?: { ignore?: readonly string[]; complexityProfile?: string }) => CheckResult,
+  run: (opts?: { ignore?: readonly string[]; complexityProfile?: string }) => CheckResult | Promise<CheckResult>,
   script = `verifyx ${name}`,
 ): Check {
   return {
@@ -112,10 +114,25 @@ export const CHECKS: Check[] = [
   ),
   nativeCheck(
     'code-metrics',
-    'Per-function code complexity gates: cyclomatic complexity, cognitive complexity, and maintainability index (MI)',
+    'Maintainability index (MI) gate — all gates off by default, enable via --complexity or --mi',
     false,
     ({ ignore, complexityProfile } = {}) => runCodeMetrics({ ignore, profile: complexityProfile as ComplexityProfile | undefined }),
     'verifyx code-metrics',
+  ),
+  nativeCheck(
+    'cyclomatic-complexity',
+    'Cyclomatic complexity gate — per-function, powered by oxlint; all gates off by default, enable via --max-cyclomatic or --complexity',
+    false,
+    ({ ignore, complexityProfile } = {}) =>
+      runCyclomaticComplexity({ ignore, profile: complexityProfile as ComplexityProfile | undefined }),
+    'verifyx cyclomatic-complexity',
+  ),
+  nativeCheck(
+    'cognitive-complexity',
+    'Cognitive complexity gate (SonarSource algorithm) — per-function, powered by biome; all gates off by default, enable via --max-cognitive or --complexity',
+    false,
+    ({ ignore, complexityProfile } = {}) => runCognitiveComplexity({ ignore, profile: complexityProfile as ComplexityProfile | undefined }),
+    'verifyx cognitive-complexity',
   ),
   defineExternalCheck({
     name: 'duplicate-code',

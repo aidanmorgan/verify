@@ -1,7 +1,6 @@
 import fs from 'node:fs'
 
 import { findSourceFiles, DEFAULT_IGNORE, DEFAULT_PATTERN, resolvePattern } from '../analyze.ts'
-import { calculateCognitiveComplexity } from '../cognitive-metrics.ts'
 import { forEachFunction } from '../functions.ts'
 import { calculateCyclomaticComplexity, calculateHalstead, calculateMaintainabilityIndex, countSloc } from '../metrics.ts'
 import type {
@@ -11,30 +10,19 @@ import type {
   CodeMetricsViolation,
   ComplexityProfile,
   FileComplexityScore,
-  FunctionScore,
 } from './code-metrics-types.ts'
 
-export type {
-  CodeMetricGate,
-  CodeMetricsGates,
-  CodeMetricsResult,
-  CodeMetricsViolation,
-  ComplexityProfile,
-  FileComplexityScore,
-  FunctionScore,
-}
+export type { CodeMetricGate, CodeMetricsGates, CodeMetricsResult, CodeMetricsViolation, ComplexityProfile, FileComplexityScore }
 export { printCodeMetricsReport } from './code-metrics-report.ts'
 
 // ─── defaults & profiles ─────────────────────────────────────────────────────
 
 export const DEFAULT_CODE_GATES: CodeMetricsGates = {
-  cyclomaticComplexity: { threshold: 10, enabled: false },
-  cognitiveComplexity: { threshold: 15, enabled: false },
   maintainabilityIndex: { threshold: 50, enabled: false },
 }
 
 /**
- * Named threshold profiles. All gates are enabled when a profile is active.
+ * Named threshold profiles. The MI gate is enabled when a profile is active.
  *
  * - light:      permissive — catches only severe outliers; suitable for adopting in a large existing codebase
  * - moderate:   balanced — meaningful signal without excessive noise; good default for most projects
@@ -42,18 +30,12 @@ export const DEFAULT_CODE_GATES: CodeMetricsGates = {
  */
 export const COMPLEXITY_PROFILES: Record<ComplexityProfile, CodeMetricsGates> = {
   light: {
-    cyclomaticComplexity: { threshold: 25, enabled: true },
-    cognitiveComplexity: { threshold: 40, enabled: true },
     maintainabilityIndex: { threshold: 20, enabled: true },
   },
   moderate: {
-    cyclomaticComplexity: { threshold: 15, enabled: true },
-    cognitiveComplexity: { threshold: 25, enabled: true },
     maintainabilityIndex: { threshold: 35, enabled: true },
   },
   aggressive: {
-    cyclomaticComplexity: { threshold: 10, enabled: true },
-    cognitiveComplexity: { threshold: 15, enabled: true },
     maintainabilityIndex: { threshold: 50, enabled: true },
   },
 }
@@ -64,8 +46,8 @@ export type CodeMetricsOptions = {
   /** Extra ignore globs appended to the default test-file exclusions. */
   ignore?: readonly string[]
   /**
-   * Enable all gates using a named threshold profile. When set, all gates are enabled using the
-   * profile's thresholds before per-gate overrides are applied. Defaults to `moderate` when
+   * Enable the MI gate using a named threshold profile. When set, the gate is enabled using the
+   * profile's threshold before per-gate overrides are applied. Defaults to `moderate` when
    * `--complexity` is passed without a value.
    */
   profile?: ComplexityProfile
@@ -93,7 +75,6 @@ export function analyzeCodeMetrics(opts: CodeMetricsOptions = {}): CodeMetricsRe
   const files = findSourceFiles(resolvePattern(pattern), ignore)
   const gates = resolveCodeGates(opts.profile, opts.gates)
 
-  const functions: FunctionScore[] = []
   const fileSloc = new Map<string, number>()
   const fileMI = new Map<string, number[]>()
 
@@ -103,13 +84,11 @@ export function analyzeCodeMetrics(opts: CodeMetricsOptions = {}): CodeMetricsRe
     fileMI.set(file, [])
   }
 
-  forEachFunction(files, (file, name, node) => {
+  forEachFunction(files, (file, _name, node) => {
     const cyclomatic = calculateCyclomaticComplexity(node)
-    const cognitive = calculateCognitiveComplexity(node)
     const { volume } = calculateHalstead(node)
     const sloc = fileSloc.get(file) ?? 0
     const mi = calculateMaintainabilityIndex(volume, cyclomatic, sloc)
-    functions.push({ file, name, cyclomatic, cognitive })
     fileMI.get(file)?.push(mi)
   })
 
@@ -124,20 +103,10 @@ export function analyzeCodeMetrics(opts: CodeMetricsOptions = {}): CodeMetricsRe
 
   const violations: CodeMetricsViolation[] = []
 
-  if (gates.cyclomaticComplexity.enabled) {
-    const offenders = functions.filter((f) => f.cyclomatic > gates.cyclomaticComplexity.threshold)
-    if (offenders.length > 0) violations.push({ kind: 'cyclomaticComplexity', functions: offenders })
-  }
-
-  if (gates.cognitiveComplexity.enabled) {
-    const offenders = functions.filter((f) => f.cognitive > gates.cognitiveComplexity.threshold)
-    if (offenders.length > 0) violations.push({ kind: 'cognitiveComplexity', functions: offenders })
-  }
-
   if (gates.maintainabilityIndex.enabled) {
     const offenders = fileScores.filter((f) => f.minMaintainability < gates.maintainabilityIndex.threshold)
     if (offenders.length > 0) violations.push({ kind: 'maintainabilityIndex', files: offenders })
   }
 
-  return { functions, files: fileScores, violations, passed: violations.length === 0 }
+  return { files: fileScores, violations, passed: violations.length === 0 }
 }

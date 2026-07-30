@@ -6,6 +6,8 @@ import { runForbiddenStrings } from '../checks/forbidden-strings.ts'
 import { runHardcodedColors } from '../checks/hardcoded-colors.ts'
 import { CHECKS } from '../checks/registry.ts'
 import { registerCodeMetricsCommand } from './registerCodeMetrics.ts'
+import { registerCognitiveCommand } from './registerCognitiveCommand.ts'
+import { registerCyclomaticCommand } from './registerCyclomaticCommand.ts'
 import { registerPkgMetricsCommand } from './registerPkgMetrics.ts'
 
 function finish(ok: boolean): void {
@@ -82,6 +84,8 @@ export function registerChecks(program: Command): void {
 
   registerPkgMetricsCommand(program, finish)
   registerCodeMetricsCommand(program, finish)
+  registerCyclomaticCommand(program, finish)
+  registerCognitiveCommand(program, finish)
 
   // Mode flows via the VERIFY_MODE env / CI, not per-subcommand flags (which collide with the root's --check).
   for (const check of CHECKS.filter((c) => c.kind === 'external')) {

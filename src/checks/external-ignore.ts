@@ -19,7 +19,7 @@ function writeTempJson(cwd: string, name: string, content: unknown): { file: str
   }
 }
 
-function readJsonOrEmpty(filePath: string): Record<string, unknown> {
+export function readJsonOrEmpty(filePath: string): Record<string, unknown> {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<string, unknown>
   } catch {

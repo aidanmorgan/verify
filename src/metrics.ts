@@ -1,8 +1,8 @@
 // Metric calculations ported from https://github.com/staff0rd/assist/tree/75a75899d7578769a433fb8058c96dd29410c254/src/commands/complexity
 import ts from 'typescript'
 
-// Structural control-flow constructs shared between cyclomatic and cognitive complexity
-export const structuralKinds = new Set<ts.SyntaxKind>([
+// Structural control-flow constructs used by cyclomatic complexity
+const structuralKinds = new Set<ts.SyntaxKind>([
   ts.SyntaxKind.IfStatement,
   ts.SyntaxKind.ForStatement,
   ts.SyntaxKind.ForInStatement,
@@ -15,7 +15,7 @@ export const structuralKinds = new Set<ts.SyntaxKind>([
 // Cyclomatic complexity also counts case clauses and conditional expressions
 const complexityKinds = new Set<ts.SyntaxKind>([...structuralKinds, ts.SyntaxKind.CaseClause, ts.SyntaxKind.ConditionalExpression])
 
-export const logicalOperators = new Set<ts.SyntaxKind>([
+const logicalOperators = new Set<ts.SyntaxKind>([
   ts.SyntaxKind.AmpersandAmpersandToken,
   ts.SyntaxKind.BarBarToken,
   ts.SyntaxKind.QuestionQuestionToken,

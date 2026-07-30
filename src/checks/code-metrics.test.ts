@@ -29,58 +29,40 @@ function write(relPath: string, content: string): void {
 describe('resolveCodeGates', () => {
   it('returns defaults when no profile or overrides given', () => {
     const gates = resolveCodeGates(undefined, undefined)
-    expect(gates.cyclomaticComplexity).toEqual(DEFAULT_CODE_GATES.cyclomaticComplexity)
-    expect(gates.cognitiveComplexity).toEqual(DEFAULT_CODE_GATES.cognitiveComplexity)
     expect(gates.maintainabilityIndex).toEqual(DEFAULT_CODE_GATES.maintainabilityIndex)
   })
 
-  it('returns profile thresholds with all gates enabled when a profile is given', () => {
+  it('returns profile thresholds with gate enabled when a profile is given', () => {
     const gates = resolveCodeGates('moderate', undefined)
-    expect(gates.cyclomaticComplexity).toEqual(COMPLEXITY_PROFILES.moderate.cyclomaticComplexity)
-    expect(gates.cognitiveComplexity).toEqual(COMPLEXITY_PROFILES.moderate.cognitiveComplexity)
     expect(gates.maintainabilityIndex).toEqual(COMPLEXITY_PROFILES.moderate.maintainabilityIndex)
-    expect(gates.cyclomaticComplexity.enabled).toBe(true)
+    expect(gates.maintainabilityIndex.enabled).toBe(true)
   })
 
   it('merges partial overrides over profile', () => {
-    const gates = resolveCodeGates('moderate', { cyclomaticComplexity: { threshold: 5 } })
-    expect(gates.cyclomaticComplexity.threshold).toBe(5)
-    expect(gates.cyclomaticComplexity.enabled).toBe(true)
-    expect(gates.cognitiveComplexity).toEqual(COMPLEXITY_PROFILES.moderate.cognitiveComplexity)
+    const gates = resolveCodeGates('moderate', { maintainabilityIndex: { threshold: 60 } })
+    expect(gates.maintainabilityIndex.threshold).toBe(60)
+    expect(gates.maintainabilityIndex.enabled).toBe(true)
   })
 
   it('merges partial overrides over defaults when no profile', () => {
-    const gates = resolveCodeGates(undefined, { cyclomaticComplexity: { threshold: 5 } })
-    expect(gates.cyclomaticComplexity.threshold).toBe(5)
-    expect(gates.cyclomaticComplexity.enabled).toBe(DEFAULT_CODE_GATES.cyclomaticComplexity.enabled)
-    expect(gates.cognitiveComplexity).toEqual(DEFAULT_CODE_GATES.cognitiveComplexity)
+    const gates = resolveCodeGates(undefined, { maintainabilityIndex: { threshold: 60 } })
+    expect(gates.maintainabilityIndex.threshold).toBe(60)
+    expect(gates.maintainabilityIndex.enabled).toBe(DEFAULT_CODE_GATES.maintainabilityIndex.enabled)
   })
 
   it('allows enabling a gate via override without a profile', () => {
-    const gates = resolveCodeGates(undefined, { cognitiveComplexity: { enabled: true } })
-    expect(gates.cognitiveComplexity.enabled).toBe(true)
-    expect(gates.cognitiveComplexity.threshold).toBe(DEFAULT_CODE_GATES.cognitiveComplexity.threshold)
+    const gates = resolveCodeGates(undefined, { maintainabilityIndex: { enabled: true } })
+    expect(gates.maintainabilityIndex.enabled).toBe(true)
+    expect(gates.maintainabilityIndex.threshold).toBe(DEFAULT_CODE_GATES.maintainabilityIndex.threshold)
   })
 
-  it('aggressive profile has stricter thresholds than moderate', () => {
-    expect(COMPLEXITY_PROFILES.aggressive.cyclomaticComplexity.threshold).toBeLessThan(
-      COMPLEXITY_PROFILES.moderate.cyclomaticComplexity.threshold,
-    )
-    expect(COMPLEXITY_PROFILES.aggressive.cognitiveComplexity.threshold).toBeLessThan(
-      COMPLEXITY_PROFILES.moderate.cognitiveComplexity.threshold,
-    )
+  it('aggressive profile has stricter threshold than moderate', () => {
     expect(COMPLEXITY_PROFILES.aggressive.maintainabilityIndex.threshold).toBeGreaterThan(
       COMPLEXITY_PROFILES.moderate.maintainabilityIndex.threshold,
     )
   })
 
-  it('light profile has more permissive thresholds than moderate', () => {
-    expect(COMPLEXITY_PROFILES.light.cyclomaticComplexity.threshold).toBeGreaterThan(
-      COMPLEXITY_PROFILES.moderate.cyclomaticComplexity.threshold,
-    )
-    expect(COMPLEXITY_PROFILES.light.cognitiveComplexity.threshold).toBeGreaterThan(
-      COMPLEXITY_PROFILES.moderate.cognitiveComplexity.threshold,
-    )
+  it('light profile has more permissive threshold than moderate', () => {
     expect(COMPLEXITY_PROFILES.light.maintainabilityIndex.threshold).toBeLessThan(
       COMPLEXITY_PROFILES.moderate.maintainabilityIndex.threshold,
     )
@@ -90,20 +72,14 @@ describe('resolveCodeGates', () => {
 describe('analyzeCodeMetrics', () => {
   it('returns empty and passed when no files match', () => {
     const result = analyzeCodeMetrics({ pattern: path.join(dir, 'nonexistent') })
-    expect(result.functions).toHaveLength(0)
     expect(result.files).toHaveLength(0)
     expect(result.passed).toBe(true)
   })
 
-  it('analyzes functions and produces per-file and per-function scores', () => {
+  it('analyzes files and produces per-file scores', () => {
     write('src/a.ts', 'export function simple() { return 1 }')
     const result = analyzeCodeMetrics({ pattern: path.join(dir, 'src') })
-    expect(result.functions.length).toBeGreaterThan(0)
     expect(result.files.length).toBeGreaterThan(0)
-    const fn = result.functions.find((f) => f.name === 'simple')
-    expect(fn).toBeDefined()
-    expect(fn?.cyclomatic).toBe(1)
-    expect(fn?.cognitive).toBe(0)
   })
 
   it('does not fail when all gates are disabled (default)', () => {
@@ -118,59 +94,6 @@ describe('analyzeCodeMetrics', () => {
     const result = analyzeCodeMetrics({ pattern: path.join(dir, 'src') })
     expect(result.passed).toBe(true)
     expect(result.violations).toHaveLength(0)
-  })
-
-  it('fails on cyclomatic complexity violation', () => {
-    write(
-      'src/branchy.ts',
-      `export function branchy(x: number) {
-        if (x === 1) return 1
-        if (x === 2) return 2
-        if (x === 3) return 3
-        if (x === 4) return 4
-        if (x === 5) return 5
-        if (x === 6) return 6
-        if (x === 7) return 7
-        if (x === 8) return 8
-        if (x === 9) return 9
-        if (x === 10) return 10
-        return 0
-      }`,
-    )
-    const result = analyzeCodeMetrics({
-      pattern: path.join(dir, 'src'),
-      gates: { cyclomaticComplexity: { threshold: 5, enabled: true } },
-    })
-    const violation = result.violations.find((v) => v.kind === 'cyclomaticComplexity')
-    expect(violation).toBeDefined()
-    expect(result.passed).toBe(false)
-  })
-
-  it('fails on cognitive complexity violation', () => {
-    write(
-      'src/nested.ts',
-      `export function deeplyNested(a: number, b: number, c: number) {
-        if (a > 0) {
-          if (b > 0) {
-            if (c > 0) {
-              if (a > b) {
-                if (b > c) {
-                  return a
-                }
-              }
-            }
-          }
-        }
-        return 0
-      }`,
-    )
-    const result = analyzeCodeMetrics({
-      pattern: path.join(dir, 'src'),
-      gates: { cognitiveComplexity: { threshold: 5, enabled: true } },
-    })
-    const violation = result.violations.find((v) => v.kind === 'cognitiveComplexity')
-    expect(violation).toBeDefined()
-    expect(result.passed).toBe(false)
   })
 
   it('fails on maintainability index violation', () => {
@@ -236,7 +159,7 @@ describe('analyzeCodeMetrics', () => {
 
   it('does not fail when a gate is disabled', () => {
     write(
-      'src/branchy.ts',
+      'src/complex.ts',
       `export function manyBranches(x: number) {
         if (x > 1) return 1; if (x > 2) return 2; if (x > 3) return 3
         if (x > 4) return 4; if (x > 5) return 5; if (x > 6) return 6
@@ -245,7 +168,7 @@ describe('analyzeCodeMetrics', () => {
     )
     const result = analyzeCodeMetrics({
       pattern: path.join(dir, 'src'),
-      gates: { cyclomaticComplexity: { threshold: 3, enabled: false } },
+      gates: { maintainabilityIndex: { threshold: 99, enabled: false } },
     })
     expect(result.violations).toHaveLength(0)
     expect(result.passed).toBe(true)
@@ -255,7 +178,8 @@ describe('analyzeCodeMetrics', () => {
     write('src/a.ts', 'export function ok() { return 1 }')
     write('src/a.test.ts', 'export function shouldBeIgnored() { return 2 }')
     const result = analyzeCodeMetrics({ pattern: path.join(dir, 'src') })
-    const testFn = result.functions.find((f) => f.name === 'shouldBeIgnored')
-    expect(testFn).toBeUndefined()
+    // a.test.ts should not appear in file scores
+    const testFile = result.files.find((f) => f.file.includes('a.test.ts'))
+    expect(testFile).toBeUndefined()
   })
 })

@@ -1,7 +1,6 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
-import { calculateCognitiveComplexity } from './cognitive-metrics.ts'
 import { calculateCyclomaticComplexity, calculateHalstead, calculateMaintainabilityIndex, countSloc } from './metrics.ts'
 
 function firstFunction(code: string): ts.Node {
@@ -95,75 +94,6 @@ describe('countSloc', () => {
 
   it('counts code trailing a single-line block comment', () => {
     expect(countSloc('/* x */ const a = 1')).toBe(1)
-  })
-})
-
-describe('calculateCognitiveComplexity', () => {
-  it('is 0 for a straight-line function', () => {
-    expect(calculateCognitiveComplexity(firstFunction('function f() { return 1 }'))).toBe(0)
-  })
-
-  it('adds 1 for a simple if', () => {
-    expect(calculateCognitiveComplexity(firstFunction('function f(a: number) { if (a > 0) return 1; return 0 }'))).toBe(1)
-  })
-
-  it('adds nesting penalty for nested if', () => {
-    const code = `function f(a: number, b: number) {
-      if (a > 0) {       // +1
-        if (b > 0) {     // +2 (nesting 1)
-          return 1
-        }
-      }
-      return 0
-    }`
-    expect(calculateCognitiveComplexity(firstFunction(code))).toBe(3)
-  })
-
-  it('adds 1 for each logical operator sequence', () => {
-    // a && b: one && sequence = +1
-    expect(calculateCognitiveComplexity(firstFunction('function f(a: boolean, b: boolean) { return a && b }'))).toBe(1)
-  })
-
-  it('counts else-if chain without extra nesting', () => {
-    const code = `function f(x: number) {
-      if (x === 1) return 1   // +1 (nesting 0)
-      else if (x === 2) return 2  // +1 (continuation, no nesting increment)
-      else if (x === 3) return 3  // +1
-      return 0
-    }`
-    expect(calculateCognitiveComplexity(firstFunction(code))).toBe(3)
-  })
-
-  it('resets nesting for nested functions', () => {
-    const code = `function outer() {
-      if (true) {            // +1
-        const inner = () => {
-          if (true) return 1 // +1 (nesting resets to 0 inside inner)
-        }
-      }
-    }`
-    expect(calculateCognitiveComplexity(firstFunction(code))).toBe(2)
-  })
-
-  it('adds 1 for a ternary', () => {
-    expect(calculateCognitiveComplexity(firstFunction('function f(a: boolean) { return a ? 1 : 0 }'))).toBe(1)
-  })
-
-  it('adds 1 for optional chaining with no nesting penalty', () => {
-    expect(calculateCognitiveComplexity(firstFunction('function f(x: T) { return x?.foo }'))).toBe(1)
-  })
-
-  it('counts for/while/switch loops with nesting', () => {
-    const code = `function f(arr: number[]) {
-      for (const x of arr) {   // +1 (nesting 0)
-        while (x > 0) {        // +2 (nesting 1)
-          switch (x) {         // +3 (nesting 2)
-            case 1: break
-          }
-        }
-      }
-    }`
-    expect(calculateCognitiveComplexity(firstFunction(code))).toBe(6)
   })
 })
 

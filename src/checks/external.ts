@@ -12,7 +12,7 @@ import type { Check, CheckMode, CheckResult, RunDefaultOptions } from './types.t
 const BIN_EXTENSIONS = process.platform === 'win32' ? (process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM').split(';').filter(Boolean) : ['']
 
 /** True when a project-local binary is installed under node_modules/.bin (cross-platform). */
-function hasLocalBin(bin: string, cwd: string = process.cwd()): boolean {
+export function hasLocalBin(bin: string, cwd: string = process.cwd()): boolean {
   const dir = path.join(cwd, 'node_modules', '.bin')
   return BIN_EXTENSIONS.some((ext) => fs.existsSync(path.join(dir, bin + ext)))
 }
@@ -21,7 +21,7 @@ function hasLocalBin(bin: string, cwd: string = process.cwd()): boolean {
  * Put the project's node_modules/.bin on PATH so tools resolve however `verify` was invoked
  * (npm script, npx, or directly) — npm only augments PATH when it runs a script itself.
  */
-function envWithLocalBin(cwd: string = process.cwd()): Record<string, string> {
+export function envWithLocalBin(cwd: string = process.cwd()): Record<string, string> {
   const binDir = path.join(cwd, 'node_modules', '.bin')
   const pathKey = Object.keys(process.env).find((k) => k.toLowerCase() === 'path') ?? 'PATH'
   return { [pathKey]: `${binDir}${path.delimiter}${process.env[pathKey] ?? ''}` }
