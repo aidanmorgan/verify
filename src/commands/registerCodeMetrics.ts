@@ -3,24 +3,15 @@ import type { Command } from 'commander'
 import { COMPLEXITY_PROFILES, DEFAULT_CODE_GATES } from '../checks/code-metrics-core.ts'
 import type { ComplexityProfile } from '../checks/code-metrics-types.ts'
 import { runCodeMetrics } from '../checks/code-metrics.ts'
+import { collect, resolveProfile } from './shared.ts'
 
 const VALID_PROFILES: ComplexityProfile[] = ['light', 'moderate', 'aggressive']
-
-function collect(value: string, previous: string[]): string[] {
-  return [...previous, value]
-}
 
 type CodeMetricsOpts = {
   complexity?: ComplexityProfile | true
   ignore: string[]
   minMi?: number
   mi?: boolean
-}
-
-function resolveProfile(value: ComplexityProfile | true | undefined): ComplexityProfile | undefined {
-  if (value === undefined) return undefined
-  if (value === true) return 'moderate'
-  return value
 }
 
 function buildGates(opts: CodeMetricsOpts) {

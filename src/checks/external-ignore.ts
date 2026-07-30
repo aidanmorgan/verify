@@ -4,7 +4,7 @@ import path from 'node:path'
 
 type IgnoreHook = (patterns: readonly string[], cwd: string) => { args: string[]; cleanup?: () => void }
 
-function writeTempJson(cwd: string, name: string, content: unknown): { file: string; cleanup: () => void } {
+export function writeTempJson(cwd: string, name: string, content: unknown): { file: string; cleanup: () => void } {
   const file = path.join(cwd, name)
   fs.writeFileSync(file, JSON.stringify(content, null, 2), 'utf-8')
   return {
@@ -84,10 +84,14 @@ export function tscIgnore(baseConfigPath = 'tsconfig.json'): IgnoreHook {
 
 export function knipIgnore(baseConfigCandidates = ['knip.json', 'knip.jsonc', '.knip.json']): IgnoreHook {
   return (patterns, cwd) => {
-    const base = baseConfigCandidates.reduce<Record<string, unknown>>((acc, name) => {
-      if (Object.keys(acc).length > 0) return acc
-      return readJsonOrEmpty(path.join(cwd, name))
-    }, {})
+    const base = (() => {
+      for (const name of baseConfigCandidates) {
+        const parsed = readJsonOrEmpty(path.join(cwd, name))
+        if (Object.keys(parsed).length > 0) return parsed
+      }
+      const pkg = readJsonOrEmpty(path.join(cwd, 'package.json'))
+      return (pkg.knip as Record<string, unknown> | undefined) ?? {}
+    })()
     const existing: string[] = Array.isArray(base.ignore) ? (base.ignore as string[]) : []
     const merged = { ...base, ignore: [...existing, ...patterns] }
     const { file, cleanup } = writeTempJson(cwd, '.verifyx-tmp-knip.json', merged)
@@ -106,8 +110,16 @@ export function skottIgnore(): IgnoreHook {
 // ─── jscpd ───────────────────────────────────────────────────────────────────
 
 export function jscpdIgnore(): IgnoreHook {
-  return (patterns) => ({
-    // jscpd --ignore accepts a single comma-separated string
-    args: ['--ignore', patterns.join(',')],
-  })
+  return (patterns, cwd) => {
+    const base = (() => {
+      const fromFile = readJsonOrEmpty(path.join(cwd, '.jscpd.json'))
+      if (Object.keys(fromFile).length > 0) return fromFile
+      const pkg = readJsonOrEmpty(path.join(cwd, 'package.json'))
+      return (pkg.jscpd as Record<string, unknown> | undefined) ?? {}
+    })()
+    const existing: string[] = Array.isArray(base.ignore) ? (base.ignore as string[]) : []
+    const merged = { ...base, ignore: [...existing, '**/*.test.*', ...patterns] }
+    const { file, cleanup } = writeTempJson(cwd, '.verifyx-tmp-jscpd.json', merged)
+    return { args: ['--config', file], cleanup }
+  }
 }

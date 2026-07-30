@@ -9,13 +9,10 @@ import { registerCodeMetricsCommand } from './registerCodeMetrics.ts'
 import { registerCognitiveCommand } from './registerCognitiveCommand.ts'
 import { registerCyclomaticCommand } from './registerCyclomaticCommand.ts'
 import { registerPkgMetricsCommand } from './registerPkgMetrics.ts'
+import { collect } from './shared.ts'
 
 function finish(ok: boolean): void {
   process.exitCode = ok ? 0 : 1
-}
-
-function collect(value: string, previous: string[]): string[] {
-  return [...previous, value]
 }
 
 export function parseMaxWarnings(raw: string): number {
@@ -97,8 +94,9 @@ export function registerChecks(program: Command): void {
     if (check.supportsMaxWarnings) {
       command.option('--max-warnings <n>', 'tolerate up to n findings before failing (counts findings)', parseMaxWarnings)
     }
-    command.action(async (toolArgs: string[], opts: { maxWarnings?: number }) => {
-      const result = await check.runDefault({ extraArgs: toolArgs, maxWarnings: opts.maxWarnings })
+    command.option('--ignore <glob>', 'ignore glob (repeatable)', collect, [])
+    command.action(async (toolArgs: string[], opts: { maxWarnings?: number; ignore: string[] }) => {
+      const result = await check.runDefault({ extraArgs: toolArgs, maxWarnings: opts.maxWarnings, ignore: opts.ignore })
       finish(result.ok)
     })
   }
