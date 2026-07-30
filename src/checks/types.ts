@@ -30,6 +30,8 @@ export type Check = {
   /** Whether `verifyx init` preselects this check as a recommended default. */
   recommended: boolean
   supportsMaxWarnings?: boolean
+  /** Optional guard — when present and returns false, the check is skipped (e.g. biome not installed). */
+  canRun?: () => boolean
   /** Run the check with its default options and print its own report. Resolves to the outcome. */
   runDefault: (options?: RunDefaultOptions) => Promise<CheckResult>
   /** How `verify init` wires this check into a consuming project. */

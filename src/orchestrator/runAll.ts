@@ -1,8 +1,9 @@
-import { CHECKS } from '../checks/registry.ts'
+import { resolveChecks } from '../checks/registry.ts'
 import { color, paintRed } from '../shared/color.ts'
+import { loadVerifyConfig } from '../shared/config.ts'
 import { resolveMode } from '../shared/mode.ts'
 import { installConsoleCapture, runCaptured } from '../shared/output.ts'
-import { runShellCommand } from '../shared/spawn.ts'
+import { runArgvCommand, runShellCommand } from '../shared/spawn.ts'
 import { type MeasureRecord, printMeasureTable } from './measure.ts'
 import { reportOutcomes } from './report.ts'
 import { entryCheckName, resolveEntries, resolveOverride, selectEntries } from './resolveEntries.ts'
@@ -20,7 +21,8 @@ type Task = { name: string; note?: string; run: () => Promise<boolean> }
 
 /** Build the ordered task list: every built-in (running its override script if defined), then customs, then tests. */
 function buildTasks(opts: RunAllOptions): Task[] {
-  const entries = resolveEntries()
+  const config = loadVerifyConfig()
+  const entries = resolveEntries(undefined, config.packageManager)
   const mode = resolveMode()
   const spawn = (name: string, command: string, cwd: string, note?: string): Task => ({
     name,
@@ -28,7 +30,8 @@ function buildTasks(opts: RunAllOptions): Task[] {
     run: async () => (await runShellCommand(command, { cwd, quiet: true })) === 0,
   })
 
-  const tasks: Task[] = CHECKS.map((check) => {
+  const activeChecks = resolveChecks()
+  const tasks: Task[] = activeChecks.map((check) => {
     const override = resolveOverride(entries, check.name, mode)
     if (!override)
       return {
@@ -46,15 +49,30 @@ function buildTasks(opts: RunAllOptions): Task[] {
     }
   })
 
-  const builtinNames = new Set(CHECKS.map((c) => c.name))
+  const builtinNames = new Set(activeChecks.map((c) => c.name))
   for (const entry of selectEntries(entries, mode)) {
     const check = entryCheckName(entry.name)
     if (builtinNames.has(check) || check === TEST_CHECK_NAME) continue
     tasks.push(spawn(entry.name, entry.command, entry.cwd, 'custom'))
   }
 
-  const testEntry = resolveTestEntry({ noTests: opts.tests === false })
-  if (testEntry) tasks.push(spawn(testEntry.name, testEntry.command, testEntry.cwd, 'tests'))
+  const testEntry = resolveTestEntry({
+    noTests: opts.tests === false,
+    ignore: opts.ignore,
+    pm: config.packageManager,
+    testConfig: config.test,
+  })
+  if (testEntry) {
+    if (testEntry.kind === 'argv') {
+      tasks.push({
+        name: testEntry.name,
+        note: 'tests',
+        run: async () => (await runArgvCommand(testEntry.argv, { cwd: testEntry.cwd, env: testEntry.env, quiet: true })) === 0,
+      })
+    } else {
+      tasks.push(spawn(testEntry.name, testEntry.command, testEntry.cwd, 'tests'))
+    }
+  }
   return tasks
 }
 

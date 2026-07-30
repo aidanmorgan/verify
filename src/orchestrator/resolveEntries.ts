@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import type { CheckMode } from '../checks/types.ts'
+import { type PackageManager, resolvePackageManager, runScriptCommand } from '../shared/packageManager.ts'
 
 export type VerifyEntry = {
   name: string
@@ -44,13 +45,14 @@ export function loadPackageScripts(cwd: string = process.cwd()): { scripts: Reco
   }
 }
 
-/** Collect the project's `verify:*` npm scripts as parallelisable entries, nearest package.json wins. */
-export function resolveEntries(cwd: string = process.cwd()): VerifyEntry[] {
+/** Collect the project's `verify:*` scripts as parallelisable entries. `pm` overrides lockfile detection. */
+export function resolveEntries(cwd: string = process.cwd(), pm?: PackageManager): VerifyEntry[] {
   const loaded = loadPackageScripts(cwd)
   if (!loaded) return []
+  const manager = resolvePackageManager(loaded.dir, pm)
   return Object.keys(loaded.scripts)
     .filter((name) => name.startsWith(VERIFY_PREFIX))
-    .map((name) => ({ name, command: `npm run ${name}`, cwd: loaded.dir }))
+    .map((name) => ({ name, command: runScriptCommand(name, manager), cwd: loaded.dir }))
 }
 
 /**

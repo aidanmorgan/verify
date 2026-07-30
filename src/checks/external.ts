@@ -23,8 +23,10 @@ export function hasLocalBin(bin: string, cwd: string = process.cwd()): boolean {
  */
 export function envWithLocalBin(cwd: string = process.cwd()): Record<string, string> {
   const binDir = path.join(cwd, 'node_modules', '.bin')
+  // Include the running node's directory so child process shims (e.g. depcruise) resolve the same node version.
+  const nodeDir = path.dirname(process.execPath)
   const pathKey = Object.keys(process.env).find((k) => k.toLowerCase() === 'path') ?? 'PATH'
-  return { [pathKey]: `${binDir}${path.delimiter}${process.env[pathKey] ?? ''}` }
+  return { [pathKey]: `${binDir}${path.delimiter}${nodeDir}${path.delimiter}${process.env[pathKey] ?? ''}` }
 }
 
 export type ExternalCheckSpec = {
@@ -115,6 +117,7 @@ export function defineExternalCheck(spec: ExternalCheckSpec): Check {
     kind: 'external',
     recommended: spec.recommended ?? false,
     supportsMaxWarnings: !!spec.maxWarnings,
+    canRun: spec.canRun,
     // Scaffold as a call into this CLI so fix-vs-check lives in one place, not the consumer's script.
     scaffold: {
       script: `verifyx ${spec.name}`,

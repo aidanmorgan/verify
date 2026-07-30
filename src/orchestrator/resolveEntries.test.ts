@@ -31,6 +31,18 @@ describe('resolveEntries', () => {
     fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ scripts: { build: 'x' } }))
     expect(resolveEntries(dir)).toEqual([])
   })
+
+  it('detects pnpm from pnpm-lock.yaml and uses pnpm run', () => {
+    fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ scripts: { 'verify:a': 'x' } }))
+    fs.writeFileSync(path.join(dir, 'pnpm-lock.yaml'), '')
+    expect(resolveEntries(dir).find((e) => e.name === 'verify:a')?.command).toBe('pnpm run verify:a')
+  })
+
+  it('uses an explicit pm override regardless of lockfile', () => {
+    fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ scripts: { 'verify:a': 'x' } }))
+    fs.writeFileSync(path.join(dir, 'pnpm-lock.yaml'), '')
+    expect(resolveEntries(dir, 'yarn').find((e) => e.name === 'verify:a')?.command).toBe('yarn verify:a')
+  })
 })
 
 describe('entryCheckName', () => {

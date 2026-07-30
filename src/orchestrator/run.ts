@@ -1,9 +1,10 @@
+import { loadVerifyConfig } from '../shared/config.ts'
 import { configureMode, resolveMode } from '../shared/mode.ts'
-import { runShellCommand, setVerbose } from '../shared/spawn.ts'
+import { runArgvCommand, runShellCommand, setVerbose } from '../shared/spawn.ts'
 import { type MeasureRecord, printMeasureTable } from './measure.ts'
 import { chatty, reportOutcomes } from './report.ts'
 import { entryCheckName, resolveEntries, selectEntries, type VerifyEntry } from './resolveEntries.ts'
-import { resolveTestEntry, TEST_CHECK_NAME } from './tests.ts'
+import { isTestEntry, resolveTestEntry, type TestEntry, TEST_CHECK_NAME } from './tests.ts'
 
 export type OrchestrateOptions = {
   measure?: boolean
@@ -14,9 +15,17 @@ export type OrchestrateOptions = {
   tests?: boolean
 }
 
-async function runEntry(entry: VerifyEntry): Promise<MeasureRecord> {
+async function runEntry(entry: VerifyEntry | TestEntry): Promise<MeasureRecord> {
   const startTime = Date.now()
-  const code = await runShellCommand(entry.command, { cwd: entry.cwd, quiet: true })
+  let code: number
+  if (isTestEntry(entry) && entry.kind === 'argv') {
+    code = await runArgvCommand(entry.argv, { cwd: entry.cwd, env: entry.env, quiet: true })
+  } else {
+    code = await runShellCommand((entry as VerifyEntry | Extract<TestEntry, { kind: 'shell' }>).command, {
+      cwd: entry.cwd,
+      quiet: true,
+    })
+  }
   return { script: entry.name, code, durationMs: Date.now() - startTime }
 }
 
@@ -30,10 +39,14 @@ export async function orchestrate(opts: OrchestrateOptions = {}): Promise<number
   // Propagate an explicit --check/--fix via VERIFY_MODE so it reaches spawned verify:* scripts too.
   configureMode(opts)
 
+  const config = loadVerifyConfig()
+
   // Collapse verify:<name>/:fix pairs per mode; the tests step owns the `test` check, so it's dropped and re-added below.
-  const gate = selectEntries(resolveEntries(), resolveMode()).filter((entry) => entryCheckName(entry.name) !== TEST_CHECK_NAME)
-  const testEntry = resolveTestEntry({ noTests: opts.tests === false })
-  const entries = testEntry ? [...gate, testEntry] : gate
+  const gate = selectEntries(resolveEntries(undefined, config.packageManager), resolveMode()).filter(
+    (entry) => entryCheckName(entry.name) !== TEST_CHECK_NAME,
+  )
+  const testEntry = resolveTestEntry({ noTests: opts.tests === false, pm: config.packageManager, testConfig: config.test })
+  const entries: Array<VerifyEntry | TestEntry> = testEntry ? [...gate, testEntry] : gate
 
   if (entries.length === 0) {
     console.log('No verify:* scripts defined — nothing to run. Add verify:* scripts, or run `verifyx all` to run every built-in check.')

@@ -4,7 +4,8 @@ import { runComments } from '../checks/comments.ts'
 import { runComplexity } from '../checks/complexity.ts'
 import { runForbiddenStrings } from '../checks/forbidden-strings.ts'
 import { runHardcodedColors } from '../checks/hardcoded-colors.ts'
-import { CHECKS } from '../checks/registry.ts'
+import { resolveChecks } from '../checks/registry.ts'
+import { registerAdvancedMetricsCommands } from './registerAdvancedMetricsCommands.ts'
 import { registerCodeMetricsCommand } from './registerCodeMetrics.ts'
 import { registerCognitiveCommand } from './registerCognitiveCommand.ts'
 import { registerCyclomaticCommand } from './registerCyclomaticCommand.ts'
@@ -83,9 +84,10 @@ export function registerChecks(program: Command): void {
   registerCodeMetricsCommand(program, finish)
   registerCyclomaticCommand(program, finish)
   registerCognitiveCommand(program, finish)
+  registerAdvancedMetricsCommands(program, finish)
 
   // Mode flows via the VERIFY_MODE env / CI, not per-subcommand flags (which collide with the root's --check).
-  for (const check of CHECKS.filter((c) => c.kind === 'external')) {
+  for (const check of resolveChecks().filter((c) => c.kind === 'external')) {
     const command = program
       .command(check.name)
       .description(check.description)
